@@ -22,8 +22,8 @@ use std::collections::BTreeMap;
 pub struct GraphQLProtocolAdapter;
 
 impl GraphQLProtocolAdapter {
-    pub fn convert(gql_doc: Document, operation: Option<String>) -> PrismaResult<QueryDocument> {
-        let operations: Vec<Operation> = match operation {
+    pub fn convert(gql_doc: Document, operation: Option<String>) -> PrismaResult<Operation> {
+        let mut operations: Vec<Operation> = match operation {
             Some(ref op) => gql_doc
                 .definitions
                 .into_iter()
@@ -41,7 +41,12 @@ impl GraphQLProtocolAdapter {
                 .map(|r| r.into_iter().flatten().collect::<Vec<Operation>>()),
         }?;
 
-        Ok(QueryDocument { operations }.dedup_operations())
+        let operation = operations
+            .pop()
+            .ok_or_else(|| PrismaError::QueryConversionError("Document contained no operations.".into()))?
+            .dedup_selections();
+
+        Ok(operation)
     }
 
     fn convert_definition(def: Definition) -> PrismaResult<Vec<Operation>> {

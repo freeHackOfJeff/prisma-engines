@@ -19,14 +19,17 @@ use itertools::Itertools;
 use std::collections::BTreeMap;
 
 #[derive(Debug)]
-pub struct QueryDocument {
-    pub operations: Vec<Operation>,
+pub enum QueryDocument {
+    Single(Operation),
+    Multi(BatchDocument),
 }
 
 impl QueryDocument {
-    pub fn dedup_operations(mut self) -> Self {
-        self.operations = self.operations.into_iter().map(|op| op.dedup_selections()).collect();
-        self
+    pub fn dedup_operations(self) -> Self {
+        match self {
+            Self::Single(operation) => Self::Single(operation.dedup_selections()),
+            Self::Multi(_) => todo!(),
+        }
     }
 }
 
@@ -34,7 +37,15 @@ impl QueryDocument {
 pub enum Operation {
     Read(Selection),
     Write(Selection),
-    // "Batch" for grouping operations into one transaction?
+}
+
+impl Operation {
+    pub fn is_find_one(&self) -> bool {
+        match self {
+            Self::Read(selection) => selection.is_find_one(),
+            _ => false,
+        }
+    }
 }
 
 impl Operation {
@@ -44,9 +55,23 @@ impl Operation {
             Self::Write(s) => Self::Write(s.dedup()),
         }
     }
+
+    fn name(&self) -> &str {
+        match self {
+            Self::Read(s) => &s.name,
+            Self::Write(s) => &s.name,
+        }
+    }
+
+    fn nested_selections(&self) -> &[Selection] {
+        match self {
+            Self::Read(s) => &s.nested_selections,
+            Self::Write(s) => &s.nested_selections,
+        }
+    }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Selection {
     pub name: String,
     pub alias: Option<String>,
@@ -64,6 +89,10 @@ impl Selection {
 
         self
     }
+
+    pub fn is_find_one(&self) -> bool {
+        self.name.starts_with("findOne")
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -76,4 +105,32 @@ pub enum QueryValue {
     Enum(String),
     List(Vec<QueryValue>),
     Object(BTreeMap<String, QueryValue>),
+}
+
+#[derive(Debug)]
+pub struct BatchDocument {
+    pub operations: Vec<Operation>,
+}
+
+impl BatchDocument {
+    pub fn new(operations: Vec<Operation>) -> Self {
+        Self { operations }
+    }
+
+    pub fn can_optimize_into_single_operation(&self) -> bool {
+        match self.operations.split_first() {
+            Some((first, rest)) if first.is_find_one() => rest.into_iter().all(|op| {
+                op.is_find_one() && first.name() == op.name() && first.nested_selections() == op.nested_selections()
+            }),
+            _ => false,
+        }
+    }
+
+    pub fn optimize_into_single_operation(self) -> Option<Operation> {
+        if self.can_optimize_into_single_operation() {
+            todo!()
+        } else {
+            None
+        }
+    }
 }
