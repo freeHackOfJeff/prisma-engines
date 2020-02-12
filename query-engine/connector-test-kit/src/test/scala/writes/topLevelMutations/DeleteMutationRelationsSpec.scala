@@ -40,8 +40,9 @@ class DeleteMutationRelationsSpec extends FlatSpec with Matchers with ApiSpecBas
          |}
       """,
         project,
-        errorCode = 3042,
-        errorContains = "The change you are trying to make would violate the required relation 'ChildToParent' between Child and Parent"
+        errorCode = 0, // 3042,
+        errorContains = """Error occurred during query execution:\nInterpretationError(\"Error for binding \\'3\\': RelationViolation(RelationViolation { relation_name: \\\"ChildToParent\\\", model_a_name: \\\"Child\\\", model_b_name: \\\"Parent\\\" })"""
+          // "The change you are trying to make would violate the required relation 'ChildToParent' between Child and Parent"
       )
 
     }
@@ -85,8 +86,8 @@ class DeleteMutationRelationsSpec extends FlatSpec with Matchers with ApiSpecBas
          |}
       """,
         project,
-        errorCode = 3042,
-        errorContains = "The change you are trying to make would violate the required relation 'ChildToParent' between Child and Parent"
+        errorCode = 0, // 3042,
+        errorContains = """Error occurred during query execution:\nInterpretationError(\"Error for binding \\'3\\': RelationViolation(RelationViolation { relation_name: \\\"ChildToParent\\\", model_a_name: \\\"Child\\\", model_b_name: \\\"Parent\\\" })\"""
       )
 
     }
@@ -246,8 +247,9 @@ class DeleteMutationRelationsSpec extends FlatSpec with Matchers with ApiSpecBas
          |}
       """,
         project,
-        errorCode = 3042,
-        errorContains = "The change you are trying to make would violate the required relation 'ChildToParent' between Child and Parent"
+        errorCode = 0, // 3042,
+        errorContains = """Error occurred during query execution:\nInterpretationError(\"Error for binding \\'3\\': RelationViolation(RelationViolation { relation_name: \\\"ChildToParent\\\", model_a_name: \\\"Child\\\", model_b_name: \\\"Parent\\\" })""",
+          // "The change you are trying to make would violate the required relation 'ChildToParent' between Child and Parent"
       )
 
     }
@@ -324,8 +326,8 @@ class DeleteMutationRelationsSpec extends FlatSpec with Matchers with ApiSpecBas
          |}
       """,
         project,
-        errorCode = 3042,
-        errorContains = "The change you are trying to make would violate the required relation 'ChildToParent' between Child and Parent"
+        errorCode = 0, // 3042,
+        errorContains = """Error occurred during query execution:\nInterpretationError(\"Error for binding \\'3\\': RelationViolation(RelationViolation { relation_name: \\\"ChildToParent\\\", model_a_name: \\\"Child\\\", model_b_name: \\\"Parent\\\" })\")"""
       )
     }
   }

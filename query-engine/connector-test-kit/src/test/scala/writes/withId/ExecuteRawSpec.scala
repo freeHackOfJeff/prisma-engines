@@ -210,7 +210,8 @@ class ExecuteRawSpec extends WordSpecLike with Matchers with ApiSpecBase {
          |}
       """.stripMargin,
       project,
-      errorCode = errorCode,
+      errorCode = 2010,
+        // errorCode,
       errorContains = errorContains
     )
   }
@@ -229,12 +230,12 @@ class ExecuteRawSpec extends WordSpecLike with Matchers with ApiSpecBase {
     val (errorCode, errorContains) = () match {
       case _ if isPostgres => (0, "duplicate key value violates unique constraint")
       case _ if isMySQL    => (1062, "Duplicate entry")
-      case _ if isSQLite   => (19, "Abort due to constraint violation (UNIQUE constraint failed: Todo.id)")
+      case _ if isSQLite   => (19, "UNIQUE constraint failed: Todo.id")
     }
 
     executeRawThatMustFail(
       sql.insertInto(modelTable).columns(idField, titleField).values(id, "irrelevant"),
-      errorCode = errorCode,
+      errorCode = 2010, // errorCode
       errorContains = errorContains
     )
   }
