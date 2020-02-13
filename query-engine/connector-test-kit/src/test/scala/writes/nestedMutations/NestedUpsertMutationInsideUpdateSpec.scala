@@ -8,6 +8,7 @@ import util._
 
 class NestedUpsertMutationInsideUpdateSpec extends FlatSpec with Matchers with ApiSpecBase with SchemaBaseV11 {
   override def runOnlyForCapabilities = Set(JoinRelationLinksCapability)
+  lazy val isMySQL = connectorTag == ConnectorTag.MySqlConnectorTag
 
   "a PM to C1!  relation with a child already in a relation" should "work with create" in {
     schemaWithRelation(onParent = ChildList, onChild = ParentReq).test { t =>
@@ -488,6 +489,12 @@ class NestedUpsertMutationInsideUpdateSpec extends FlatSpec with Matchers with A
     val todoId     = createResult.pathAsString("data.createTodo.id")
     val comment1Id = createResult.pathAsString("data.createTodo.comments.[0].id")
 
+
+    val errorTarget = () match {
+      case _ if isMySQL    => "constraint: `uniqueComment`"
+      case _   => "fields: (`uniqueComment`)"
+    }
+
     server.queryThatMustFail(
       s"""mutation {
          |  updateTodo(
@@ -510,7 +517,7 @@ class NestedUpsertMutationInsideUpdateSpec extends FlatSpec with Matchers with A
       """,
       project,
       errorCode = 2002,
-      errorContains = "Unique constraint failed on the fields: (`uniqueComment`)"
+      errorContains = s"Unique constraint failed on the $errorTarget"
     )
   }
 

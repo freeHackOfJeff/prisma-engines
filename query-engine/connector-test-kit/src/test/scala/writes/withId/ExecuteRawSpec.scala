@@ -198,7 +198,7 @@ class ExecuteRawSpec extends WordSpecLike with Matchers with ApiSpecBase {
   "syntactic errors should bubble through to the user" in {
     val (errorCode, errorContains) = () match {
       case _ if isPostgres => (0, "error at end of input")
-      case _ if isMySQL    => (1064, "check the manual that corresponds to your MySQL server version for the right syntax to use near")
+      case _ if isMySQL    => (1064, "check the manual that corresponds to your")
       case _ if isSQLite   => (1, "incomplete input")
     }
 
@@ -228,7 +228,7 @@ class ExecuteRawSpec extends WordSpecLike with Matchers with ApiSpecBase {
     val id = res.pathAsString("data.createTodo.id")
 
     val (errorCode, errorContains) = () match {
-      case _ if isPostgres => (0, "duplicate key value violates unique constraint")
+      case _ if isPostgres => (23505, "already exists")
       case _ if isMySQL    => (1062, "Duplicate entry")
       case _ if isSQLite   => (19, "UNIQUE constraint failed: Todo.id")
     }

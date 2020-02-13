@@ -2069,13 +2069,12 @@ dependencies = [
 
 [[package]]
 name = "quaint"
-version = "0.2.0-alpha.4"
-source = "git+https://github.com/prisma/quaint.git#b26feba48d0283f9a775d7e3e374f591cc5be03d"
+version = "0.2.0-alpha.5"
+source = "git+https://github.com/prisma/quaint.git#6f8a78ef68294a4b98715915d2a5f81010091475"
 dependencies = [
  "async-trait",
  "bytes",
  "chrono",
- "debug_stub_derive",
  "futures 0.3.4",
  "lazy_static",
  "libsqlite3-sys",

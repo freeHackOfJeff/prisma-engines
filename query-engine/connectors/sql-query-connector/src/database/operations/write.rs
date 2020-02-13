@@ -21,6 +21,7 @@ pub async fn create_record(conn: &dyn QueryExt, model: &ModelRef, args: WriteArg
                     let constraint = DatabaseConstraint::Fields(fields.clone());
                     return Err(SqlError::UniqueConstraintViolation { constraint });
                 }
+                quaint::error::DatabaseConstraint::ForeignKey => unreachable!(),
             },
             ErrorKind::NullConstraintViolation { constraint } => match constraint {
                 quaint::error::DatabaseConstraint::Index(name) => {
@@ -31,6 +32,7 @@ pub async fn create_record(conn: &dyn QueryExt, model: &ModelRef, args: WriteArg
                     let constraint = DatabaseConstraint::Fields(fields.clone());
                     return Err(SqlError::NullConstraintViolation { constraint });
                 }
+                quaint::error::DatabaseConstraint::ForeignKey => unreachable!(),
             },
             _ => return Err(SqlError::from(e)),
         },

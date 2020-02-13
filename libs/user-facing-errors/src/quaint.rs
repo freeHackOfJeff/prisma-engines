@@ -6,6 +6,7 @@ impl From<&quaint::error::DatabaseConstraint> for crate::query_engine::DatabaseC
         match other {
             quaint::error::DatabaseConstraint::Fields(fields) => Self::Fields(fields.to_vec()),
             quaint::error::DatabaseConstraint::Index(index) => Self::Index(index.to_string()),
+            _ => todo!(),
         }
     }
 }
@@ -15,6 +16,7 @@ impl From<quaint::error::DatabaseConstraint> for crate::query_engine::DatabaseCo
         match other {
             quaint::error::DatabaseConstraint::Fields(fields) => Self::Fields(fields.to_vec()),
             quaint::error::DatabaseConstraint::Index(index) => Self::Index(index.to_string()),
+            _ => todo!(),
         }
     }
 }
