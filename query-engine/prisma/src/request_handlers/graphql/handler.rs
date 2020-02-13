@@ -69,8 +69,11 @@ impl RequestHandler for GraphQlRequestHandler {
         let request = req.into();
 
         match QueryDocument::try_from(request.body) {
-            Ok(QueryDocument::Single(query)) => handle_single_query(query, ctx.clone()).await,
-            Ok(QueryDocument::Multi(batch)) => handle_batch(batch, ctx).await,
+            Ok(QueryDocument::Single(query)) => handle_single_query(dbg!(query), ctx.clone()).await,
+            Ok(QueryDocument::Multi(batch)) => match batch.compact() {
+                BatchDocument::Multi(batch) => handle_batch(batch, ctx).await,
+                BatchDocument::Compact(_compacted) => todo!(),
+            }
             Err(err) => {
                 let mut responses = response_ir::Responses::default();
                 responses.insert_error(err);
@@ -107,10 +110,10 @@ async fn handle_single_query(query: Operation, ctx: Arc<PrismaContext>) -> Prism
     PrismaResponse::Single(responses)
 }
 
-async fn handle_batch(queries: BatchDocument, ctx: &Arc<PrismaContext>) -> PrismaResponse {
-    let mut futures = Vec::with_capacity(queries.operations.len());
+async fn handle_batch(queries: Vec<Operation>, ctx: &Arc<PrismaContext>) -> PrismaResponse {
+    let mut futures = Vec::with_capacity(queries.len());
 
-    for operation in queries.operations.into_iter() {
+    for operation in queries.into_iter() {
         futures.push(tokio::spawn(handle_single_query(operation, ctx.clone())));
     }
 

@@ -33,7 +33,7 @@ impl QueryDocument {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Operation {
     Read(Selection),
     Write(Selection),
@@ -44,6 +44,20 @@ impl Operation {
         match self {
             Self::Read(selection) => selection.is_find_one(),
             _ => false,
+        }
+    }
+
+    pub fn into_read(self) -> Option<Selection> {
+        match self {
+            Self::Read(sel) => Some(sel),
+            _ => None,
+        }
+    }
+
+    pub fn into_write(self) -> Option<Selection> {
+        match self {
+            Self::Write(sel) => Some(sel),
+            _ => None,
         }
     }
 }
@@ -71,7 +85,7 @@ impl Operation {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Selection {
     pub name: String,
     pub alias: Option<String>,
@@ -107,30 +121,100 @@ pub enum QueryValue {
     Object(BTreeMap<String, QueryValue>),
 }
 
+impl QueryValue {
+    pub fn into_object(self) -> Option<BTreeMap<String, QueryValue>> {
+        match self {
+            Self::Object(map) => Some(map),
+            _ => None,
+        }
+    }
+}
+
 #[derive(Debug)]
-pub struct BatchDocument {
-    pub operations: Vec<Operation>,
+pub enum BatchDocument {
+    Multi(Vec<Operation>),
+    Compact(CompactedDocument),
 }
 
 impl BatchDocument {
     pub fn new(operations: Vec<Operation>) -> Self {
-        Self { operations }
+        Self::Multi(operations)
     }
 
-    pub fn can_optimize_into_single_operation(&self) -> bool {
-        match self.operations.split_first() {
-            Some((first, rest)) if first.is_find_one() => rest.into_iter().all(|op| {
-                op.is_find_one() && first.name() == op.name() && first.nested_selections() == op.nested_selections()
-            }),
-            _ => false,
+    fn can_compact(&self) -> bool {
+        match self {
+            Self::Multi(operations) => match operations.split_first() {
+                Some((first, rest)) if first.is_find_one() => rest.into_iter().all(|op| {
+                    op.is_find_one() && first.name() == op.name() && first.nested_selections() == op.nested_selections()
+                }),
+                _ => false,
+            },
+            Self::Compact(_) => false,
         }
     }
 
-    pub fn optimize_into_single_operation(self) -> Option<Operation> {
-        if self.can_optimize_into_single_operation() {
+    pub fn compact(self) -> Self {
+        if self.can_compact() {
             todo!()
         } else {
-            None
+            self
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct CompactedDocument {
+    pub arguments: Vec<QueryValue>,
+    pub operation: Operation,
+}
+
+impl From<Vec<Operation>> for CompactedDocument {
+    fn from(ops: Vec<Operation>) -> Self {
+        let selections: Vec<Selection> = ops
+            .into_iter()
+            .map(|op| op.into_read().expect("Trying to compact a write operation."))
+            .collect();
+
+        let selection = {
+            let argument_name = selections[0].arguments[0]
+                .1
+                .clone()
+                .into_object()
+                .unwrap()
+                .into_iter()
+                .next()
+                .unwrap()
+                .0;
+
+            let values: Vec<QueryValue> = selections
+                .iter()
+                .map(|selection| {
+                    let obj = selection.arguments[0]
+                        .1
+                        .clone()
+                        .into_object()
+                        .expect("Trying to compact a selection with non-object argument");
+
+                    obj.into_iter().map(|(_, val)| val).next().unwrap()
+                })
+                .collect();
+
+            let mut argument = BTreeMap::new();
+            argument.insert(format!("{}_in", argument_name), QueryValue::List(values));
+
+            Selection {
+                name: selections[0].name.replacen("findOne", "findMany", 1),
+                alias: selections[0].alias.clone(),
+                nested_selections: selections[0].nested_selections.clone(),
+                arguments: vec![(String::from("where"), QueryValue::Object(argument))],
+            }
+        };
+
+        let arguments = selections.into_iter().map(|mut selection| selection.arguments.pop().unwrap().1).collect();
+
+        Self {
+            arguments,
+            operation: Operation::Read(selection),
         }
     }
 }
