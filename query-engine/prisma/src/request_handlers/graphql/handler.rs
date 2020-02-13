@@ -3,7 +3,7 @@ use crate::{context::PrismaContext, PrismaError, PrismaRequest, PrismaResponse, 
 use async_trait::async_trait;
 use futures::{future, FutureExt};
 use graphql_parser as gql;
-use query_core::{response_ir, BatchDocument, CoreError, Operation, QueryDocument};
+use query_core::{response_ir, BatchDocument, CompactedDocument, CoreError, Operation, QueryDocument};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, convert::TryFrom, panic::AssertUnwindSafe, sync::Arc};
 
@@ -69,10 +69,10 @@ impl RequestHandler for GraphQlRequestHandler {
         let request = req.into();
 
         match QueryDocument::try_from(request.body) {
-            Ok(QueryDocument::Single(query)) => handle_single_query(dbg!(query), ctx.clone()).await,
+            Ok(QueryDocument::Single(query)) => handle_single_query(query, ctx.clone()).await,
             Ok(QueryDocument::Multi(batch)) => match batch.compact() {
                 BatchDocument::Multi(batch) => handle_batch(batch, ctx).await,
-                BatchDocument::Compact(_compacted) => todo!(),
+                BatchDocument::Compact(compacted) => handle_compacted(compacted, ctx).await,
             }
             Err(err) => {
                 let mut responses = response_ir::Responses::default();
@@ -124,6 +124,12 @@ async fn handle_batch(queries: Vec<Operation>, ctx: &Arc<PrismaContext>) -> Pris
         .collect();
 
     PrismaResponse::Multi(responses)
+}
+
+async fn handle_compacted(document: CompactedDocument, ctx: &Arc<PrismaContext>) -> PrismaResponse {
+    let response = handle_single_query(document.operation, ctx.clone()).await;
+    dbg!(response);
+    panic!("NO NO, NO NO NO NO, NO NO NO NO, NO NO AIN'T NO LIMIT!")
 }
 
 async fn handle_graphql_query(query_doc: Operation, ctx: &PrismaContext) -> PrismaResult<response_ir::Responses> {

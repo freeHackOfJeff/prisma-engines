@@ -28,7 +28,7 @@ impl QueryDocument {
     pub fn dedup_operations(self) -> Self {
         match self {
             Self::Single(operation) => Self::Single(operation.dedup_selections()),
-            Self::Multi(_) => todo!(),
+            _ => self,
         }
     }
 }
@@ -154,10 +154,11 @@ impl BatchDocument {
     }
 
     pub fn compact(self) -> Self {
-        if self.can_compact() {
-            todo!()
-        } else {
-            self
+        match self {
+            Self::Multi(operations) if self.can_compact() => {
+                Self::Compact(CompactedDocument::from(operations))
+            },
+            _ => self,
         }
     }
 }
@@ -168,6 +169,7 @@ pub struct CompactedDocument {
     pub operation: Operation,
 }
 
+/// Here be the dragons. Ay caramba!
 impl From<Vec<Operation>> for CompactedDocument {
     fn from(ops: Vec<Operation>) -> Self {
         let selections: Vec<Selection> = ops
